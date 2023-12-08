@@ -10,7 +10,7 @@ import scala.concurrent.duration.*
 //import se.yankov.utils.*
 import se.yankov.utils.general.*
 
-object PolimorphicCancellation extends IOApp.Simple:
+object PolymorphicCancellation extends IOApp.Simple:
 
   trait MyApplicativeError[F[_], E] extends Applicative[F] {
     def raiseError[A](error: E): F[A]
@@ -45,15 +45,15 @@ object PolimorphicCancellation extends IOApp.Simple:
 
   def auth[F[_], E](using mc: MonadCancel[F, E]): F[Unit] = mc.uncancelable { poll =>
     for {
-      pw <- mc.onCancel(poll(mc.unit.unsafeSleep(2.second) >> mc.pure("pw").mydebug), mc.pure("Cancelled").mydebug.void)
-      verified <- (mc.unit.unsafeSleep(2.second) >> mc.pure(pw == "pw").mydebug)
+      pw <- mc.onCancel(poll(unsafeSleep(2.second) >> mc.pure("pw").mydebug), mc.pure("Cancelled").mydebug.void)
+      verified <- (unsafeSleep(2.second) >> mc.pure(pw == "pw").mydebug)
       _ <- if (verified) mc.pure("success").mydebug else mc.pure("failure").mydebug
     } yield ()
   }
 
   def authProg[F[_], E](using gs: GenSpawn[F, E]): F[Unit] = for {
     fib <- gs.start(auth.mydebug)
-    _ <- gs.unit.unsafeSleep(5.second) >> fib.cancel
+    _ <- unsafeSleep(5.second) >> fib.cancel
     res <- fib.join
   } yield ()
 
