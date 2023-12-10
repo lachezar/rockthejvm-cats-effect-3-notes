@@ -11,6 +11,12 @@ lazy val root = (project in file(".")).settings(
     "org.typelevel" %% "cats-effect-kernel" % "3.5.2",
     // standard "effect" library (Queues, Console, Random etc.)
     "org.typelevel" %% "cats-effect-std" % "3.5.2",
-    "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test
+    "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test,
+
+    // Http4s
+    "org.http4s" %% "http4s-ember-server" % "1.0.0-M40",
+    "org.http4s" %% "http4s-circe" % "1.0.0-M40",
+    "org.http4s" %% "http4s-dsl" % "1.0.0-M40",
+    "io.circe" %% "circe-generic" % "0.15.0-M1"
   )
 )
