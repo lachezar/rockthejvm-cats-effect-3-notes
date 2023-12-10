@@ -29,6 +29,7 @@ object Mutex:
             case State(locked, currentlyBlockedDeferreds) =>
               val newQueue = currentlyBlockedDeferreds.filterNot(_ == deferred)
               val isCurrentlyBlocked: Boolean = currentlyBlockedDeferreds.contains(deferred)
+              println(isCurrentlyBlocked)
               State(locked, newQueue) -> (if isCurrentlyBlocked then IO.unit else release)
           }
 
@@ -155,23 +156,24 @@ object MutexPlayground extends IOApp.Simple:
     fib1 <- (IO.pure("fib1 getting mutex").mydebug >>
               mutex.acquire >>
               IO.pure("fib1 got the mutex and never released").mydebug >>
-              IO.sleep(3.second) >>
-              mutex.release).onCancel(mutex.release).start
+              IO.sleep(0.second) >>
+              mutex.release >>
+              IO.pure("fib1 released the mutex").mydebug).onCancel(mutex.release).start
     fib2 <- (IO.pure("fib2 sleeping").mydebug >>
-              IO.sleep(1.second) >>
+              IO.sleep(2.second) >>
               IO.pure("fib2 trying to acquire the mutex").mydebug >>
               mutex.acquire.onCancel(IO.pure("fib2 onCancel").mydebug.void) >>
               IO.pure("fib2 acquired the mutex").mydebug >>
               IO.sleep(3.second) >>
               mutex.release).start
     fib3 <- (IO.pure("fib3 sleeping").mydebug >>
-              IO.sleep(1500.millis) >>
+              IO.sleep(2500.millis) >>
               IO.pure("fib3 trying to acquire the mutex").mydebug >>
               mutex.acquire >>
               IO.pure("fib3 acquired the mutex").mydebug).start
-    _ <- IO.sleep(2.second) >>
-              IO.pure("cancelling fib1").mydebug >>
-              fib1.cancel
+    _ <- IO.sleep(2100.millis) >>
+              IO.pure("cancelling fib2").mydebug >>
+              fib2.cancel
     _ <- fib1.join
     _ <- fib2.join
     _ <- fib3.join
