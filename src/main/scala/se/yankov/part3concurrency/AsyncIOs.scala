@@ -12,12 +12,10 @@ object AsyncIOs extends IOApp.Simple:
 
   val f = IO.async_((cb: Either[Throwable, Int] => Unit) => cb(Right(42)))
 
-  def tp: Resource[IO, (ExecutorService, ExecutionContext)] = Resource.make[IO, (ExecutorService, ExecutionContext)](
-    IO.delay {
-      val ex: ExecutorService = Executors.newFixedThreadPool(8)
-      val ec: ExecutionContext = ExecutionContext.fromExecutorService(ex)
-      ex -> ec
-    }) { case ex -> _ => IO.delay(ex.shutdown()) }
+  def tp: Resource[IO, ExecutionContext] = for {
+    ex: ExecutorService <- Resource.make(IO(Executors.newFixedThreadPool(8)))(ex => IO.println("shutdown exService") >> IO(ex.shutdown()))
+    ec: ExecutionContext <- Resource.liftK(IO(ExecutionContext.fromExecutorService(ex)))
+  } yield ec
 
   def asyncToIO[A](comp: () => A)(ec: ExecutionContext): IO[A] =
     IO.async_((cb: Either[Throwable, A] => Unit) => Future(comp())(ec).onComplete(res => cb(res.toEither))(ec))
@@ -41,7 +39,7 @@ object AsyncIOs extends IOApp.Simple:
     }
   }
 
-  override def run: IO[Unit] = tp.use { case _ -> ec =>
+  override def run: IO[Unit] = tp.use { ec =>
     val x: IO[Int] = asyncToIO2(() => {
       println("hello")
       Thread.sleep(1000)

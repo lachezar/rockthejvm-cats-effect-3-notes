@@ -16,15 +16,13 @@ object BlockingIOs extends IOApp.Simple:
     42
   }
 
-  def tp: Resource[IO, (ExecutorService, ExecutionContext)] = Resource.make[IO, (ExecutorService, ExecutionContext)](
-    IO.delay {
-      val ex: ExecutorService = Executors.newFixedThreadPool(8)
-      val ec: ExecutionContext = ExecutionContext.fromExecutorService(ex)
-      ex -> ec
-    }){ case ex -> _ => IO.delay(ex.shutdown()) }
+  def tp: Resource[IO, ExecutionContext] = for {
+    ex: ExecutorService <- Resource.make(IO(Executors.newFixedThreadPool(8)))(ex => IO.println("shutdown exService") >> IO(ex.shutdown()))
+    ec: ExecutionContext <- Resource.liftK(IO(ExecutionContext.fromExecutorService(ex)))
+  } yield ec
 
   def ios: IO[Int] =
-    tp.use { case _ -> ec =>
+    tp.use { ec =>
       (1 to 100).map(IO.pure).reduce((x: IO[Int], y: IO[Int]) => x.mydebug >> IO.cede >> y.mydebug).evalOn(ec)
     }
 
