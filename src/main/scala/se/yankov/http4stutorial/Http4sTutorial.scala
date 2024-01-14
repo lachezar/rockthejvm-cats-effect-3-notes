@@ -142,16 +142,15 @@ object Http4sTutorial extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] = {
     // Construct the environment (DI layers)
-    val deps: Resource[IO, Env[IO]] = Resource.make[IO, Env[IO]] {
-      for {
-        m <- IO.ref[Map[UUID, Movie]](Map(exampleMovie.id -> exampleMovie))
-        d <- IO.ref[Map[Director, DirectorDetails]](
-          Map(exampleDirector -> DirectorDetails(exampleDirector.firstname, exampleDirector.lastname, "Comedy"))
-        )
-      } yield EnvImplementation(m, d)
-    }(env => IO.println("Finalizing the deps"))
+    val deps: Resource[IO, Env[IO]] = (for {
+      m <- Resource.make(IO.ref[Map[UUID, Movie]](Map(exampleMovie.id -> exampleMovie)))(_ => IO.println("finalize movies db"))
+      d <- Resource.make(
+              IO.ref[Map[Director, DirectorDetails]](
+                Map(exampleDirector -> DirectorDetails(exampleDirector.firstname, exampleDirector.lastname, "Comedy"))
+              )
+            )(_ => IO.println("finalize directors db"))
+    } yield EnvImplementation(m, d))
     deps.use { (env: Env[IO]) =>
-
       // Construct the API and thread in the environment via RIO
       val apis: AppRoutes[IO] = movieRoutes[IO] <+> directorRoutes[IO]
       val httpApp: HttpRoutes[IO] = apis.flatMapF((app: RIO[IO, Response[IO]]) => OptionT.liftF(app.run(env)))
